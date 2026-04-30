@@ -1,0 +1,26 @@
+{
+  "active_provider": "openrouter",
+  "active_model": "openai/gpt-oss-120b:free",
+  "providers": {
+    "google": {
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "apiKey": "...",
+      "models": ["gemini-1.5-flash", "gemini-1.5-pro"]
+    },
+    "samba-nova": {
+      "baseUrl": "https://api.sambanova.ai/v1",
+      "apiKey": "...",
+      "models": ["meta-llama-3.1-405b-instruct"]
+    },
+    "ollama": {
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "apiKey": "ollama",
+      "models": ["deepseek-r1:latest", "qwen3.5:9b"]
+    },
+    "openrouter": {
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKey": "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",
+      "models": ["qwen/qwen3-next-80b-a3b-instruct:free", "google/gemma-4-31b-it:free", "openai/gpt-oss-120b:free"]
+    }
+  }
+}

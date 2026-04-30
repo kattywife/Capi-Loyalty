@@ -30,31 +30,58 @@ class UniversalAIService:
             api_key=p_config["apiKey"],
             default_headers=extra_headers 
         )
-
-    async def get_capybara_advice(self, user_name: str, segment: str, total_balance: float):
-        # 1. Подготавливаем промпт из конфига
+    
+    async def get_capybara_advice(self, **kwargs):
+        """Универсальный метод с защитой от лишних символов"""
         prompt_cfg = self.prompts["capybara_advice"]
-        user_message = prompt_cfg["user_template"].format(
-            user_name=user_name,
-            segment=segment,
-            balance=total_balance
-        )
-
+        
         try:
-            # 2. Отправляем запрос (модель тоже берем из конфига)
+            # Подставляем данные в шаблон
+            user_message = prompt_cfg["user_template"].format(**kwargs)
+
             response = await self.client.chat.completions.create(
                 model=self.config["active_model"],
                 messages=[
                     {"role": "system", "content": prompt_cfg["system"]},
                     {"role": "user", "content": user_message}
                 ],
-                max_tokens=100,
-                temperature=0.7
+                max_tokens=80,
+                temperature=0.6 # Снизили температуру для большей строгости
             )
-            return response.choices[0].message.content.strip()
+            
+            raw_advice = response.choices[0].message.content.strip()
+            
+            # --- ОЧИСТКА ОТ СИМВОЛОВ Markdown ---
+            # Удаляем звездочки, решетки и подчеркивания
+            clean_advice = raw_advice.replace("*", "").replace("#", "").replace("_", "")
+            
+            return clean_advice
+
         except Exception as e:
             print(f"AI Error: {e}")
-            return "Мандаринки — это радость! 🍊"
+            return "Твои мандаринки растут! Проверь новые акции в разделе партнеров. 🍊"
+        
+    async def get_chat_response(self, **kwargs):
+        """Метод для полноценного диалога в чате"""
+        prompt_cfg = self.prompts["capybara_chat"]
+        try:
+            user_message_filled = prompt_cfg["user_template"].format(**kwargs)
+
+            response = await self.client.chat.completions.create(
+                model=self.config["active_model"],
+                messages=[
+                    {"role": "system", "content": prompt_cfg["system"]},
+                    {"role": "user", "content": user_message_filled}
+                ],
+                max_tokens=150,
+                temperature=0.7
+            )
+            
+            raw_text = response.choices[0].message.content.strip()
+            return raw_text.replace("*", "").replace("#", "").replace("_", "")
+        except Exception as e:
+            print(f"Chat AI Error: {e}")
+            return "Прости, я немного задумался о мандаринках. Повтори вопрос? 🍊"
 
 # Экспортируем готовый сервис
 ai_service = UniversalAIService()

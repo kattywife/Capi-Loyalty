@@ -20,5 +20,5 @@ backend/.venv/
 backend/*.pyc
 
 # AI Configs (Скрываем реальные ключи)
-backend/config/providers.json
-!backend/config/providers.json.example
+#backend/config/providers.json
+#!backend/config/providers.json.example

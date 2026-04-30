@@ -52,7 +52,7 @@ export default function ChatModal({ onClose }: { onClose: () => void }) {
     setInput('');
     setLoading(true);
 
-    try {
+    try {// Внутри ChatModal.tsx метод handleSend:
       const responseText = await api.sendChatMessage(Number(currentUser?.id), userText);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),

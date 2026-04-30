@@ -35,21 +35,22 @@ def get_users():
     """Возвращает список всех пользователей для экрана выбора (демо-стенд)"""
     return data_manager.get_users_list()
 
-# Добавляем новый эндпоинт в main.py
-
 @app.get("/api/ai-advice/{user_id}", tags=["Core"])
 async def get_ai_advice(user_id: int):
-    """Отдельный быстрый запрос для ИИ совета"""
-    data = data_manager.get_user_dashboard(user_id)
-    if not data:
+    user_data = data_manager.get_user_dashboard(user_id)
+    if not user_data:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Запускаем асинхронно
+    # Собираем контекст из истории и офферов (segment, top_program, best_partners)
+    opt_context = data_manager.get_optimization_context(user_id)
+    
+    # Передаем всё в ИИ
     advice = await ai_service.get_capybara_advice(
-        data["user"]["full_name"], 
-        data["user"]["financial_segment"], 
-        data["total_mandarins"]
+        user_name=user_data["user"]["full_name"],
+        balance=user_data["total_mandarins"],
+        **opt_context 
     )
+    
     return {"advice": advice}
 
 # А в основном эндпоинте убираем ожидание ИИ
@@ -72,21 +73,24 @@ def get_analytics(user_id: int):
         return []
     return data
 
-# Добавь сам эндпоинт
-@app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest):
-    # Используем твой существующий ai_service
-    # Мы можем адаптировать его метод под свободный чат
-    # Для хакатона можно просто переиспользовать генерацию совета с новым промптом
-    response_text = await ai_service.get_capybara_advice(
-        user_name=f"User ID {request.user_id}", # Можно подтянуть имя из data_manager
-        segment="DYNAMIC",
-        total_balance=0 # Или реальный баланс
-    )
-    # Или, если хочешь честный чат, вызови ai_service напрямую:
-    # response_text = await ai_service.client.chat.completions.create(...)
+
+@app.post("/api/chat", tags=["Core"])
+async def chat_with_capy(request: ChatRequest):
+    user_data = data_manager.get_user_dashboard(request.user_id)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    return {"response": response_text}
+    # Получаем тот же крутой контекст, что и для советов
+    opt_context = data_manager.get_optimization_context(request.user_id)
+    
+    response = await ai_service.get_chat_response(
+        user_name=user_data["user"]["full_name"],
+        balance=user_data["total_mandarins"],
+        user_message=request.message,
+        **opt_context
+    )
+    
+    return {"response": response}
 
 if __name__ == "__main__":
     import uvicorn

@@ -69,14 +69,13 @@ export const api = {
       const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, message })
+        body: JSON.stringify({ user_id: userId, message }) // Поля должны совпадать с ChatRequest в Python
       });
-      if (!response.ok) throw new Error("Failed to get chat response");
       const data = await response.json();
       return data.response;
     } catch (error) {
-      console.error("API Error (sendChatMessage):", error);
-      return "Ой, что-то пошло не так. Но мои мандаринки всё ещё на месте! 🍊";
+      console.error("Chat API Error:", error);
+      return "Кажется, связь с Капибарой прервалась. Проверь интернет! 🍊";
     }
   },
 };

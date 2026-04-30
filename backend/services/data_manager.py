@@ -65,6 +65,54 @@ class DataManager:
         chart_data['payout_date'] = chart_data['payout_date'].dt.strftime('%Y-%m-%d')
         
         return chart_data.to_dict(orient="records")
+    
+    def get_user_spending_context(self, user_id: int):
+        """Анализирует, в какой категории/программе юзер активнее всего"""
+        user_acc_ids = self.accounts[self.accounts['user_id'] == user_id]['account_id'].tolist()
+        user_history = self.history[self.history['account_id'].isin(user_acc_ids)]
+        
+        if user_history.empty:
+            return "Новичок в экосистеме"
+
+        # Соединяем историю с программами через аккаунты
+        enriched_history = user_history.merge(self.accounts[['account_id', 'loyalty_program_id']], on='account_id')
+        enriched_history = enriched_history.merge(self.programs[['loyalty_program_id', 'loyalty_program_name']], on='loyalty_program_id')
+        
+        # Находим самую прибыльную программу
+        top_program = enriched_history.groupby('loyalty_program_name')['cashback_amount'].sum().idxmax()
+        total_cashback = enriched_history['cashback_amount'].sum()
+        
+        return f"Топ программа: {top_program}, всего кэшбэка за период: {total_cashback} мандаринок"
+    
+    # backend/services/data_manager.py
+
+    def get_optimization_context(self, user_id: int):
+        """Готовит данные о том, на чем юзер может заработать больше всего сейчас"""
+        # 1. Находим сегмент юзера
+        user_row = self.users[self.users['id'] == user_id]
+        if user_row.empty: return ""
+        segment = user_row.iloc[0]['financial_segment']
+
+        # 2. Находим топ-программу по истории
+        user_acc_ids = self.accounts[self.accounts['user_id'] == user_id]['account_id'].tolist()
+        user_history = self.history[self.history['account_id'].isin(user_acc_ids)]
+        
+        top_prog = "Black" # По умолчанию
+        if not user_history.empty:
+            enriched = user_history.merge(self.accounts[['account_id', 'loyalty_program_id']], on='account_id')
+            enriched = enriched.merge(self.programs[['loyalty_program_id', 'loyalty_program_name']], on='loyalty_program_id')
+            top_prog = enriched.groupby('loyalty_program_name')['cashback_amount'].sum().idxmax()
+
+        # 3. Берем 3 самых выгодных оффера для этого сегмента из Offers.csv
+        available_offers = self.offers[self.offers['financial_segment'] == segment]
+        top_offers = available_offers.sort_values(by='cashback_percent', ascending=False).head(3)
+        partners_list = ", ".join([f"{row.partner_name} ({row.cashback_percent}%)" for _, row in top_offers.iterrows()])
+
+        return {
+            "top_program": top_prog,
+            "best_partners": partners_list,
+            "segment": segment
+        }
 
 # Создаем экземпляр для экспорта
 data_manager = DataManager()
